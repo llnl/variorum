@@ -1774,3 +1774,56 @@ char *variorum_get_current_version()
 {
     return QuoteMacro(VARIORUM_VERSION);
 }
+
+// Exploratory API for AMD ESMI metrics table interface
+// This provides a simple way to get all metrics in one call for experimentation
+int variorum_get_amd_esmi_metrics_json(char **metrics_json_str)
+{
+#ifdef VARIORUM_WITH_AMD_APU
+    int err = 0;
+    char hostname[1024];
+    uint64_t ts;
+    struct timeval tv;
+
+    err = variorum_enter(__FILE__, __FUNCTION__, __LINE__);
+    if (err)
+    {
+        return -1;
+    }
+
+    gethostname(hostname, 1024);
+    gettimeofday(&tv, NULL);
+    ts = tv.tv_sec * (uint64_t)1000000 + tv.tv_usec;
+
+    json_t *metrics_obj = json_object();
+    json_t *node_obj = json_object();
+    json_object_set_new(metrics_obj, hostname, node_obj);
+    json_object_set_new(node_obj, "timestamp", json_integer(ts));
+
+    // Get the number of sockets
+    int *nsockets = NULL;
+    variorum_get_topology(&nsockets, NULL, NULL);
+    int total_sockets = (nsockets != NULL) ? *nsockets : 1;
+
+    // Use the ESMI metrics table interface to get all metrics
+    // This calls the exploratory API from amd_apu_esmi_features
+    extern void get_all_metrics_json_esmi(int chipid, int total_sockets, json_t *output);
+    get_all_metrics_json_esmi(0, total_sockets, node_obj);
+
+    *metrics_json_str = json_dumps(metrics_obj, JSON_INDENT(4));
+    json_decref(metrics_obj);
+
+    err = variorum_exit(__FILE__, __FUNCTION__, __LINE__);
+    if (err)
+    {
+        return -1;
+    }
+    return 0;
+#else
+    variorum_error_handler("Feature only available for AMD MI300A APU",
+                           VARIORUM_ERROR_FEATURE_NOT_IMPLEMENTED,
+                           getenv("HOSTNAME"), __FILE__,
+                           __FUNCTION__, __LINE__);
+    return -1;
+#endif
+}

@@ -6,11 +6,13 @@
 set(variorum_amd_apu_headers
   ${CMAKE_CURRENT_SOURCE_DIR}/mi300aAPU.h
   ${CMAKE_CURRENT_SOURCE_DIR}/amd_apu_power_features.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/amd_apu_esmi_features.h
   CACHE INTERNAL "")
 
 set(variorum_amd_apu_sources
   ${CMAKE_CURRENT_SOURCE_DIR}/mi300aAPU.c
   ${CMAKE_CURRENT_SOURCE_DIR}/amd_apu_power_features.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/amd_apu_esmi_features.c
   CACHE INTERNAL "")
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${variorum_includes})
