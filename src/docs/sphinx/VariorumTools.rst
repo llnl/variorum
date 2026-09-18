@@ -14,8 +14,8 @@ system software such as schedulers and runtime systems, to create a portable
 As part of our efforts to support a hierarchical, dynamic and open-source
 portable power management stack, we have integrated Variorum with various
 open-source system software. The `JSON API
-<https://variorum.readthedocs.io/en/latest/VariorumAPI.html#json-api>`_ enables
-Variorum to interface with higher-level system software in an portable and easy
+<https://variorum.readthedocs.io/en/latest/api/json.html>`_ enables
+Variorum to interface with higher-level system software in a portable and easy
 manner.
 
 ******************
@@ -55,10 +55,9 @@ sufficient. Our existing integration implementations, which are linked `here
 <https://variorum.readthedocs.io/en/latest/VariorumTools.html#ecp-integrations>`_,
 are a good starting point.
 
-The format of the JSON object has been documented in :doc:`VariorumAPI` and
-includes total node power, as well as CPU, Memory, and GPU power (current
-assumption is that of two sockets per node). It also includes the hostname and
-the timestamp.
+The format of the JSON object has been documented in :doc:`api/json` and
+includes total node power, as well as CPU, memory, and GPU power when supported.
+It also includes the hostname and timestamp.
 
 We describe a simple example of how the data from the JSON object can be
 extracted from Variorum in the client tool below, and we point developers to the
@@ -69,11 +68,14 @@ retrieved in a similar manner by other JSON libraries and supporting tools.
 .. code:: c
 
    #include <jansson.h>
+   #include <stdio.h>
+   #include <stdlib.h>
+   #include <variorum/variorum.h>
 
    void parse_variorum_data()
    {
        // Define a JSON object to retrieve data from Variorum in
-       json_t *power_obj = json_object();
+       json_t *power_obj = NULL;
        char *s = NULL;
 
        // Define a local variable for the value of interest. For example, the
@@ -85,7 +87,7 @@ retrieved in a similar manner by other JSON libraries and supporting tools.
        int ret;
 
        // Call the Variorum JSON API
-       ret = variorum_get_node_power_json(&s);
+       ret = variorum_get_power_json(&s);
        if (ret != 0)
        {
            printf("Variorum get node power API failed.\n");
@@ -97,12 +99,14 @@ retrieved in a similar manner by other JSON libraries and supporting tools.
        // appropriate get function. Documentation of these can be found in the
        // JANSSON library documentation.
        power_obj = json_loads(s, JSON_DECODE_ANY, NULL);
-       power_node = json_real_value(json_object_get(power_obj, "power_node_watts"));
+       void *iter = json_object_iter(power_obj);
+       json_t *node_obj = json_object_iter_value(iter);
+       power_node = json_real_value(json_object_get(node_obj, "power_node_watts"));
        printf("Node power is: %lf\n", power_node);
 
        // Decrement references to JSON object, required for JANSSON library.
        json_decref(power_obj);
 
-        // Deallocate the string
+       // Deallocate the string
        free(s);
    }

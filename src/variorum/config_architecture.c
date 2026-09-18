@@ -48,7 +48,11 @@
 #include <config_amd_gpu.h>
 #endif
 
-// Current support is for CPU + GPU multi-platform builds,
+#ifdef VARIORUM_WITH_AMD_APU
+#include <config_amd_apu.h>
+#endif
+
+// Current support is for CPU + GPU + APU multi-platform builds,
 // but can be extended to include other accelerators in the future.
 #define MAX_PLATFORMS 2
 
@@ -165,6 +169,9 @@ int variorum_detect_arch(void)
 #ifdef VARIORUM_WITH_AMD_GPU
     g_platform[P_AMD_GPU_IDX].arch_id = detect_amd_gpu_arch();
 #endif
+#ifdef VARIORUM_WITH_AMD_APU
+    g_platform[P_AMD_APU_IDX].arch_id = detect_amd_apu_arch();
+#endif
 
     char *val = getenv("VARIORUM_LOG");
     if (val != NULL && atoi(val) == 1)
@@ -182,6 +189,9 @@ int variorum_detect_arch(void)
 #endif
 #ifdef VARIORUM_WITH_AMD_GPU
         printf("AMD GPU Model: MI-%ld\n", *g_platform[P_AMD_GPU_IDX].arch_id);
+#endif
+#ifdef VARIORUM_WITH_AMD_APU
+        printf("AMD APU Model: %ld\n", *g_platform[P_AMD_APU_IDX].arch_id);
 #endif
     }
 
@@ -394,6 +404,9 @@ int variorum_set_func_ptrs()
 #endif
 #ifdef VARIORUM_WITH_AMD_GPU
     err = set_amd_gpu_func_ptrs(P_AMD_GPU_IDX);
+#endif
+#ifdef VARIORUM_WITH_AMD_APU
+    err = set_amd_apu_func_ptrs(P_AMD_APU_IDX);
 #endif
     return err;
 }

@@ -115,38 +115,63 @@ commands. CMake ``set`` commands need to specify the root cache path as follows:
 Variorum's build system supports the following CMake options:
 
 -  ``HWLOC_DIR`` - Path to an HWLOC install.
+
 -  ``JANSSON_DIR`` - Path to a JANSSON install.
+
 -  ``SPHINX_EXECUTABLE`` - Path to sphinx-build binary (required for
    documentation).
+
 -  ``VARIORUM_WITH_AMD_CPU (default=OFF)`` - Enable Variorum build for AMD CPU
    architecture.
+
+-  ``VARIORUM_WITH_AMD_GPU (default=OFF)`` - Enable Variorum build for AMD GPU
+   architecture.
+
+-  ``VARIORUM_WITH_AMD_APU (default=OFF)`` - Enable Variorum build for AMD APU
+   architecture (e.g. MI300A). Requires ``ROCM_DIR`` to be set, or the AMD SMI
+   library to be discoverable on the system.
+
 -  ``VARIORUM_WITH_NVIDIA_GPU (default=OFF)`` - Enable Variorum build for Nvidia
    GPU architecture.
+
 -  ``VARIORUM_WITH_IBM_CPU (default=OFF)`` - Enable Variorum build for IBM CPU
    architecture.
+
 -  ``VARIORUM_WITH_ARM_CPU (default=OFF)`` - Enable Variorum build for ARM CPU
    architecture.
+
 -  ``VARIORUM_WITH_INTEL_CPU (default=ON)`` - Enable Variorum build for Intel
    CPU architecture.
+
 -  ``VARIORUM_WITH_INTEL_GPU (default=OFF)`` - Enable Variorum build for Intel
    discrete GPU architecture.
+
 -  ``ENABLE_FORTRAN (default=ON)`` - Enable Fortran compiler for building
    example integration with Fortran application, Fortran compiler must exist.
+
 -  ``ENABLE_PYTHON (default=ON)`` - Enable Python wrappers for adding PyVariorum
    examples.
+
 -  ``ENABLE_MPI (default=OFF)`` - Enable MPI compiler for building MPI examples,
    MPI compiler must exist.
+
 -  ``ENABLE_OPENMP (default=ON)`` - Enable OpenMP extensions for building OpenMP
    examples.
+
 -  ``ENABLE_WARNINGS (default=OFF)`` - Build with compiler warning flags -Wall
    -Wextra -Werror, used primarily by developers.
+
 -  ``BUILD_DOCS (default=ON)`` - Controls if the Variorum documentation is built
    (when sphinx and doxygen are found).
+
 -  ``BUILD_SHARED_LIBS (default=ON)`` - Controls if shared (ON) or static (OFF)
    libraries are built.
+
 -  ``BUILD_TESTS (default=ON)`` - Controls if unit tests are built.
+
 -  ``VARIORUM_DEBUG (default=OFF)`` - Enable Variorum debug statements, useful
    if values are not translating correctly.
+
 -  ``USE_MSR_SAFE_BEFORE_1_5_0 (default=OFF)`` - Use msr-safe prior to v1.5.0,
    dependency of Intel architectures for accessing counters from userspace.
 

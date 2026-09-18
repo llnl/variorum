@@ -24,6 +24,7 @@ option(ENABLE_LIBJUSTIFY         "Enable libjustify formatting"           OFF)
 
 option(VARIORUM_WITH_AMD_CPU     "Support AMD CPU architectures"          OFF)
 option(VARIORUM_WITH_AMD_GPU     "Support AMD GPU architectures"          OFF)
+option(VARIORUM_WITH_AMD_APU     "Support AMD APU architectures"          OFF)
 option(VARIORUM_WITH_ARM_CPU     "Support ARM CPU architectures"          OFF)
 option(VARIORUM_WITH_IBM_CPU     "Support IBM CPU architectures"          OFF)
 option(VARIORUM_WITH_INTEL_CPU   "Support Intel CPU architectures"        ON)

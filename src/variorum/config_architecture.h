@@ -91,6 +91,12 @@ enum amd_gpu_arch_e
     AMD_INSTINCT = 1,
 };
 
+/// @brief List of AMD APU family and models.
+enum amd_apu_arch_e
+{
+    AMD_MI300A = 1,
+};
+
 enum supported_platforms_e
 {
 #ifdef VARIORUM_WITH_INTEL_CPU
@@ -104,6 +110,9 @@ enum supported_platforms_e
 #endif
 #ifdef VARIORUM_WITH_AMD_GPU
     P_AMD_GPU_IDX,
+#endif
+#ifdef VARIORUM_WITH_AMD_APU
+    P_AMD_APU_IDX,
 #endif
 #ifdef VARIORUM_WITH_IBM_CPU
     P_IBM_CPU_IDX,
