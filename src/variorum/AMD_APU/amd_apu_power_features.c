@@ -885,34 +885,679 @@ void get_thermals_json(int chipid, int total_sockets, json_t *output)
 
 void get_clocks_data(int chipid, int total_sockets, int verbose, FILE *output)
 {
-    // Placeholder - implementation would mirror AMD_GPU clock monitoring
+    amdsmi_status_t ret;
+    uint32_t num_devices = 0;
+    amdsmi_processor_handle *devices = NULL;
+    int gpus_per_socket;
+    char hostname[1024];
+    static int init = 0;
+    static struct timeval start;
+    struct timeval now;
+
+    gethostname(hostname, 1024);
+
+    ret = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
+    if (ret != AMDSMI_STATUS_SUCCESS)
+    {
+        variorum_error_handler("Could not initialize AMDSMI",
+                               VARIORUM_ERROR_PLATFORM_ENV,
+                               getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                               __LINE__);
+        exit(-1);
+    }
+
+    devices = amd_apu_get_all_processor_handles(&num_devices);
+    if (devices == NULL || num_devices == 0)
+    {
+        variorum_error_handler("Could not get number of APU devices",
+                               VARIORUM_ERROR_PLATFORM_ENV,
+                               getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                               __LINE__);
+        amdsmi_shut_down();
+        return;
+    }
+
+    gpus_per_socket = num_devices / total_sockets;
+
+    if (!init)
+    {
+        init = 1;
+        gettimeofday(&start, NULL);
+        if (verbose == 0)
+        {
+#ifdef LIBJUSTIFY_FOUND
+            cfprintf(output, "%s %s %s %s %s %s %s\n",
+                     "_AMD_APU_CLOCKS", "Host", "Socket", "DeviceID",
+                     "SystemClock_MHz", "MemoryClock_MHz", "Timestamp_sec");
+#else
+            fprintf(output,
+                    "_AMD_APU_CLOCKS Host Socket DeviceID SystemClock_MHz MemoryClock_MHz Timestamp_sec\n");
+#endif
+        }
+    }
+
+    gettimeofday(&now, NULL);
+
+    for (int i = chipid * gpus_per_socket;
+         i < (chipid + 1) * gpus_per_socket; i++)
+    {
+        amdsmi_frequencies_t f_sys, f_mem;
+        uint64_t sys_freq = 0, mem_freq = 0;
+        int sys_valid = 0, mem_valid = 0;
+
+        // Get system clock frequency
+        ret = amdsmi_get_clk_freq(devices[i], AMDSMI_CLK_TYPE_SYS, &f_sys);
+        if (ret == AMDSMI_STATUS_SUCCESS)
+        {
+            sys_freq = f_sys.frequency[f_sys.current];
+            sys_valid = 1;
+        }
+        else if (ret != AMDSMI_STATUS_NOT_SUPPORTED)
+        {
+            variorum_error_handler("AMDSMI system clock API was not successful",
+                                   VARIORUM_ERROR_PLATFORM_ENV,
+                                   getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                                   __LINE__);
+        }
+
+        // Get memory clock frequency
+        ret = amdsmi_get_clk_freq(devices[i], AMDSMI_CLK_TYPE_MEM, &f_mem);
+        if (ret == AMDSMI_STATUS_SUCCESS)
+        {
+            mem_freq = f_mem.frequency[f_mem.current];
+            mem_valid = 1;
+        }
+        else if (ret != AMDSMI_STATUS_NOT_SUPPORTED)
+        {
+            variorum_error_handler("AMDSMI memory clock API was not successful",
+                                   VARIORUM_ERROR_PLATFORM_ENV,
+                                   getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                                   __LINE__);
+        }
+
+        // Only print if we got at least one valid clock reading
+        if (sys_valid || mem_valid)
+        {
+            if (verbose == 1)
+            {
+#ifdef LIBJUSTIFY_FOUND
+                cfprintf(output, "%s: %s, %s: %d, %s: %d, %s: %lu MHz, %s: %lu MHz, %s: %lf sec\n",
+                         "_AMD_APU_CLOCKS", hostname, "Socket", chipid,
+                         "DeviceID", i, "SystemClock", sys_freq,
+                         "MemoryClock", mem_freq, "Timestamp",
+                         (now.tv_sec - start.tv_sec) + (now.tv_usec - start.tv_usec) / 1000000.0);
+#else
+                fprintf(output,
+                        "_AMD_APU_CLOCKS Host: %s, Socket: %d, DeviceID: %d,"
+                        " SystemClock: %lu MHz, MemoryClock: %lu MHz, Timestamp: %lf sec\n",
+                        hostname, chipid, i, sys_freq, mem_freq,
+                        (now.tv_sec - start.tv_sec) + (now.tv_usec - start.tv_usec) / 1000000.0);
+#endif
+            }
+            else
+            {
+#ifdef LIBJUSTIFY_FOUND
+                cfprintf(output, "_AMD_APU_CLOCKS %s %d %d %lu %lu %lf\n",
+                         hostname, chipid, i, sys_freq, mem_freq,
+                         (now.tv_sec - start.tv_sec) + (now.tv_usec - start.tv_usec) / 1000000.0);
+#else
+                fprintf(output, "_AMD_APU_CLOCKS %s %d %d %lu %lu %lf\n",
+                        hostname, chipid, i, sys_freq, mem_freq,
+                        (now.tv_sec - start.tv_sec) + (now.tv_usec - start.tv_usec) / 1000000.0);
+#endif
+            }
+        }
+    }
+
+#ifdef LIBJUSTIFY_FOUND
+    cflush();
+#endif
+
+    free(devices);
+
+    ret = amdsmi_shut_down();
+    if (ret != AMDSMI_STATUS_SUCCESS)
+    {
+        variorum_error_handler("Could not shutdown AMDSMI",
+                               VARIORUM_ERROR_PLATFORM_ENV,
+                               getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                               __LINE__);
+    }
 }
 
 void get_clocks_json(int chipid, int total_sockets, json_t *output)
 {
-    // Placeholder - implementation would mirror AMD_GPU clock monitoring
+    amdsmi_status_t ret;
+    uint32_t num_devices = 0;
+    amdsmi_processor_handle *devices = NULL;
+    int gpus_per_socket;
+    char socketID[16];
+    char deviceID[32];
+
+    ret = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
+    if (ret != AMDSMI_STATUS_SUCCESS)
+    {
+        variorum_error_handler("Could not initialize AMDSMI",
+                               VARIORUM_ERROR_PLATFORM_ENV,
+                               getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                               __LINE__);
+        return;
+    }
+
+    devices = amd_apu_get_all_processor_handles(&num_devices);
+    if (devices == NULL || num_devices == 0)
+    {
+        variorum_error_handler("Could not get number of APU devices",
+                               VARIORUM_ERROR_PLATFORM_ENV,
+                               getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                               __LINE__);
+        amdsmi_shut_down();
+        return;
+    }
+
+    gpus_per_socket = num_devices / total_sockets;
+
+    // Add metadata
+    json_object_set_new(output, "num_gpus_per_socket",
+                        json_integer(gpus_per_socket));
+    json_object_set_new(output, "num_apus_per_node",
+                        json_integer(total_sockets));
+
+    snprintf(socketID, 16, "socket_%d", chipid);
+
+    json_t *socket_obj = json_object_get(output, socketID);
+    if (socket_obj == NULL)
+    {
+        socket_obj = json_object();
+        json_object_set_new(output, socketID, socket_obj);
+    }
+
+    // Create clocks object under socket
+    json_t *clocks_obj = json_object();
+    json_object_set_new(socket_obj, "clocks_apu_mhz", clocks_obj);
+
+    // Query clocks for each device in this socket
+    for (int i = chipid * gpus_per_socket;
+         i < (chipid + 1) * gpus_per_socket; i++)
+    {
+        amdsmi_frequencies_t f_sys, f_mem;
+
+        // Get system clock frequency
+        ret = amdsmi_get_clk_freq(devices[i], AMDSMI_CLK_TYPE_SYS, &f_sys);
+        if (ret == AMDSMI_STATUS_SUCCESS)
+        {
+            snprintf(deviceID, 32, "APU_%d_sys", i);
+            json_object_set_new(clocks_obj, deviceID,
+                                json_integer(f_sys.frequency[f_sys.current]));
+        }
+
+        // Get memory clock frequency
+        ret = amdsmi_get_clk_freq(devices[i], AMDSMI_CLK_TYPE_MEM, &f_mem);
+        if (ret == AMDSMI_STATUS_SUCCESS)
+        {
+            snprintf(deviceID, 32, "APU_%d_mem", i);
+            json_object_set_new(clocks_obj, deviceID,
+                                json_integer(f_mem.frequency[f_mem.current]));
+        }
+    }
+
+    free(devices);
+
+    ret = amdsmi_shut_down();
+    if (ret != AMDSMI_STATUS_SUCCESS)
+    {
+        variorum_error_handler("Could not shutdown AMDSMI",
+                               VARIORUM_ERROR_PLATFORM_ENV,
+                               getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                               __LINE__);
+    }
 }
 
 void get_power_limit_data(int chipid, int total_sockets, int verbose,
                           FILE *output)
 {
-    // Placeholder - implementation would mirror AMD_GPU power cap monitoring
+    amdsmi_status_t ret;
+    uint32_t num_devices = 0;
+    amdsmi_processor_handle *devices = NULL;
+    int gpus_per_socket;
+    char hostname[1024];
+    static int init = 0;
+    static struct timeval start;
+    struct timeval now;
+
+    gethostname(hostname, 1024);
+
+    ret = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
+    if (ret != AMDSMI_STATUS_SUCCESS)
+    {
+        variorum_error_handler("Could not initialize AMDSMI",
+                               VARIORUM_ERROR_PLATFORM_ENV,
+                               getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                               __LINE__);
+        exit(-1);
+    }
+
+    devices = amd_apu_get_all_processor_handles(&num_devices);
+    if (devices == NULL || num_devices == 0)
+    {
+        variorum_error_handler("Could not get number of APU devices",
+                               VARIORUM_ERROR_PLATFORM_ENV,
+                               getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                               __LINE__);
+        amdsmi_shut_down();
+        return;
+    }
+
+    gpus_per_socket = num_devices / total_sockets;
+
+    if (!init)
+    {
+        init = 1;
+        gettimeofday(&start, NULL);
+        if (verbose == 0)
+        {
+#ifdef LIBJUSTIFY_FOUND
+            cfprintf(output, "%s %s %s %s %s %s %s %s\n",
+                     "_AMD_APU_POWER_CAP", "Host", "Socket", "DeviceID",
+                     "Current_W", "Min_W", "Max_W", "Timestamp_sec");
+#else
+            fprintf(output,
+                    "_AMD_APU_POWER_CAP Host Socket DeviceID Current_W Min_W Max_W Timestamp_sec\n");
+#endif
+        }
+    }
+
+    gettimeofday(&now, NULL);
+
+    for (int i = chipid * gpus_per_socket;
+         i < (chipid + 1) * gpus_per_socket; i++)
+    {
+        amdsmi_power_cap_info_t cap_info;
+
+        ret = amdsmi_get_power_cap_info(devices[i], 0, &cap_info);
+
+        // Handle case where power cap is not supported on some devices
+        if ((ret != AMDSMI_STATUS_SUCCESS) && (ret != AMDSMI_STATUS_NOT_SUPPORTED))
+        {
+            variorum_error_handler("AMDSMI power cap info API was not successful",
+                                   VARIORUM_ERROR_PLATFORM_ENV,
+                                   getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                                   __LINE__);
+        }
+
+        // Only print if we got valid data
+        if (ret == AMDSMI_STATUS_SUCCESS)
+        {
+            // Convert from microWatts to Watts
+            double current_w = (double)cap_info.power_cap / 1000000.0;
+            double min_w = (double)cap_info.min_power_cap / 1000000.0;
+            double max_w = (double)cap_info.max_power_cap / 1000000.0;
+
+            if (verbose == 1)
+            {
+#ifdef LIBJUSTIFY_FOUND
+                cfprintf(output, "%s: %s, %s: %d, %s: %d, %s: %0.2lf W, %s: %0.2lf W, %s: %0.2lf W, %s: %lf sec\n",
+                         "_AMD_APU_POWER_CAP", hostname, "Socket", chipid,
+                         "DeviceID", i, "Current", current_w,
+                         "Min", min_w, "Max", max_w, "Timestamp",
+                         (now.tv_sec - start.tv_sec) + (now.tv_usec - start.tv_usec) / 1000000.0);
+#else
+                fprintf(output,
+                        "_AMD_APU_POWER_CAP Host: %s, Socket: %d, DeviceID: %d,"
+                        " Current: %0.2lf W, Min: %0.2lf W, Max: %0.2lf W, Timestamp: %lf sec\n",
+                        hostname, chipid, i, current_w, min_w, max_w,
+                        (now.tv_sec - start.tv_sec) + (now.tv_usec - start.tv_usec) / 1000000.0);
+#endif
+            }
+            else
+            {
+#ifdef LIBJUSTIFY_FOUND
+                cfprintf(output, "_AMD_APU_POWER_CAP %s %d %d %0.2lf %0.2lf %0.2lf %lf\n",
+                         hostname, chipid, i, current_w, min_w, max_w,
+                         (now.tv_sec - start.tv_sec) + (now.tv_usec - start.tv_usec) / 1000000.0);
+#else
+                fprintf(output, "_AMD_APU_POWER_CAP %s %d %d %0.2lf %0.2lf %0.2lf %lf\n",
+                        hostname, chipid, i, current_w, min_w, max_w,
+                        (now.tv_sec - start.tv_sec) + (now.tv_usec - start.tv_usec) / 1000000.0);
+#endif
+            }
+        }
+    }
+
+#ifdef LIBJUSTIFY_FOUND
+    cflush();
+#endif
+
+    free(devices);
+
+    ret = amdsmi_shut_down();
+    if (ret != AMDSMI_STATUS_SUCCESS)
+    {
+        variorum_error_handler("Could not shutdown AMDSMI",
+                               VARIORUM_ERROR_PLATFORM_ENV,
+                               getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                               __LINE__);
+    }
 }
 
 void cap_each_gpu_power_limit(int chipid, int total_sockets,
                               unsigned int powerlimit)
 {
-    // Placeholder - implementation would mirror AMD_GPU power cap setting
+    amdsmi_status_t ret;
+    uint32_t num_devices = 0;
+    amdsmi_processor_handle *devices = NULL;
+    int gpus_per_socket;
+
+    // Convert Watts to microWatts
+    uint64_t powerlimit_uwatts = (uint64_t)powerlimit * 1000000;
+
+    ret = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
+    if (ret != AMDSMI_STATUS_SUCCESS)
+    {
+        variorum_error_handler("Could not initialize AMDSMI",
+                               VARIORUM_ERROR_PLATFORM_ENV,
+                               getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                               __LINE__);
+        exit(-1);
+    }
+
+    devices = amd_apu_get_all_processor_handles(&num_devices);
+    if (devices == NULL || num_devices == 0)
+    {
+        variorum_error_handler("Could not get number of APU devices",
+                               VARIORUM_ERROR_PLATFORM_ENV,
+                               getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                               __LINE__);
+        amdsmi_shut_down();
+        return;
+    }
+
+    gpus_per_socket = num_devices / total_sockets;
+
+    // Set power cap for each device in this socket
+    for (int i = chipid * gpus_per_socket;
+         i < (chipid + 1) * gpus_per_socket; i++)
+    {
+        amdsmi_power_cap_info_t cap_info;
+
+        // First, validate the cap is within range
+        ret = amdsmi_get_power_cap_info(devices[i], 0, &cap_info);
+
+        if (ret == AMDSMI_STATUS_SUCCESS)
+        {
+            // Check if cap is within valid range
+            if (powerlimit_uwatts < cap_info.min_power_cap ||
+                powerlimit_uwatts > cap_info.max_power_cap)
+            {
+                fprintf(stderr,
+                        "Warning: Power cap %u W is outside valid range [%lu-%lu] W for device %d\n",
+                        powerlimit,
+                        cap_info.min_power_cap / 1000000,
+                        cap_info.max_power_cap / 1000000,
+                        i);
+                continue;
+            }
+
+            // Set the power cap
+            ret = amdsmi_set_power_cap(devices[i], 0, powerlimit_uwatts);
+
+            if (ret == AMDSMI_STATUS_SUCCESS)
+            {
+                printf("Set power cap to %u W for device %d\n", powerlimit, i);
+            }
+            else if (ret == AMDSMI_STATUS_NO_PERM)
+            {
+                variorum_error_handler(
+                    "Insufficient permissions to set the APU power limit",
+                    VARIORUM_ERROR_PLATFORM_ENV,
+                    getenv("HOSTNAME"), __FILE__, __FUNCTION__, __LINE__);
+            }
+            else if (ret == AMDSMI_STATUS_NOT_SUPPORTED)
+            {
+                // Silently skip - device doesn't support power capping
+            }
+            else
+            {
+                variorum_error_handler(
+                    "Could not set the specified APU power limit",
+                    VARIORUM_ERROR_PLATFORM_ENV,
+                    getenv("HOSTNAME"), __FILE__, __FUNCTION__, __LINE__);
+            }
+        }
+        else if (ret != AMDSMI_STATUS_NOT_SUPPORTED)
+        {
+            // Error getting power cap info (except NOT_SUPPORTED which is expected)
+            variorum_error_handler(
+                "Could not get power cap info for validation",
+                VARIORUM_ERROR_PLATFORM_ENV,
+                getenv("HOSTNAME"), __FILE__, __FUNCTION__, __LINE__);
+        }
+    }
+
+    free(devices);
+
+    ret = amdsmi_shut_down();
+    if (ret != AMDSMI_STATUS_SUCCESS)
+    {
+        variorum_error_handler("Could not shutdown AMDSMI",
+                               VARIORUM_ERROR_PLATFORM_ENV,
+                               getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                               __LINE__);
+    }
 }
 
 void get_gpu_utilization_data(int chipid, int total_sockets, int verbose,
                               FILE *output)
 {
-    // Placeholder - implementation would mirror AMD_GPU utilization monitoring
+    amdsmi_status_t ret;
+    uint32_t num_devices = 0;
+    amdsmi_processor_handle *devices = NULL;
+    int gpus_per_socket;
+    char hostname[1024];
+    static int init = 0;
+    static struct timeval start;
+    struct timeval now;
+
+    gethostname(hostname, 1024);
+
+    ret = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
+    if (ret != AMDSMI_STATUS_SUCCESS)
+    {
+        variorum_error_handler("Could not initialize AMDSMI",
+                               VARIORUM_ERROR_PLATFORM_ENV,
+                               getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                               __LINE__);
+        exit(-1);
+    }
+
+    devices = amd_apu_get_all_processor_handles(&num_devices);
+    if (devices == NULL || num_devices == 0)
+    {
+        variorum_error_handler("Could not get number of APU devices",
+                               VARIORUM_ERROR_PLATFORM_ENV,
+                               getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                               __LINE__);
+        amdsmi_shut_down();
+        return;
+    }
+
+    gpus_per_socket = num_devices / total_sockets;
+
+    if (!init)
+    {
+        init = 1;
+        gettimeofday(&start, NULL);
+        if (verbose == 0)
+        {
+#ifdef LIBJUSTIFY_FOUND
+            cfprintf(output, "%s %s %s %s %s %s %s %s\n",
+                     "_AMD_APU_UTILIZATION", "Host", "Socket", "DeviceID",
+                     "GFX_percent", "UMC_percent", "MM_percent", "Timestamp_sec");
+#else
+            fprintf(output,
+                    "_AMD_APU_UTILIZATION Host Socket DeviceID GFX_percent UMC_percent MM_percent Timestamp_sec\n");
+#endif
+        }
+    }
+
+    gettimeofday(&now, NULL);
+
+    for (int i = chipid * gpus_per_socket;
+         i < (chipid + 1) * gpus_per_socket; i++)
+    {
+        amdsmi_engine_usage_t engine_usage = {};
+
+        ret = amdsmi_get_gpu_activity(devices[i], &engine_usage);
+
+        // Handle case where utilization is not supported on some devices
+        if ((ret != AMDSMI_STATUS_SUCCESS) && (ret != AMDSMI_STATUS_NOT_SUPPORTED))
+        {
+            variorum_error_handler("AMDSMI GPU activity API was not successful",
+                                   VARIORUM_ERROR_PLATFORM_ENV,
+                                   getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                                   __LINE__);
+        }
+
+        // Only print if we got valid data
+        if (ret == AMDSMI_STATUS_SUCCESS)
+        {
+            if (verbose == 1)
+            {
+#ifdef LIBJUSTIFY_FOUND
+                cfprintf(output, "%s: %s, %s: %d, %s: %d, %s: %d%%, %s: %d%%, %s: %d%%, %s: %lf sec\n",
+                         "_AMD_APU_UTILIZATION", hostname, "Socket", chipid,
+                         "DeviceID", i, "GFX", engine_usage.gfx_activity,
+                         "UMC", engine_usage.umc_activity, "MM", engine_usage.mm_activity,
+                         "Timestamp",
+                         (now.tv_sec - start.tv_sec) + (now.tv_usec - start.tv_usec) / 1000000.0);
+#else
+                fprintf(output,
+                        "_AMD_APU_UTILIZATION Host: %s, Socket: %d, DeviceID: %d,"
+                        " GFX: %d%%, UMC: %d%%, MM: %d%%, Timestamp: %lf sec\n",
+                        hostname, chipid, i, engine_usage.gfx_activity,
+                        engine_usage.umc_activity, engine_usage.mm_activity,
+                        (now.tv_sec - start.tv_sec) + (now.tv_usec - start.tv_usec) / 1000000.0);
+#endif
+            }
+            else
+            {
+#ifdef LIBJUSTIFY_FOUND
+                cfprintf(output, "_AMD_APU_UTILIZATION %s %d %d %d %d %d %lf\n",
+                         hostname, chipid, i, engine_usage.gfx_activity,
+                         engine_usage.umc_activity, engine_usage.mm_activity,
+                         (now.tv_sec - start.tv_sec) + (now.tv_usec - start.tv_usec) / 1000000.0);
+#else
+                fprintf(output, "_AMD_APU_UTILIZATION %s %d %d %d %d %d %lf\n",
+                        hostname, chipid, i, engine_usage.gfx_activity,
+                        engine_usage.umc_activity, engine_usage.mm_activity,
+                        (now.tv_sec - start.tv_sec) + (now.tv_usec - start.tv_usec) / 1000000.0);
+#endif
+            }
+        }
+    }
+
+#ifdef LIBJUSTIFY_FOUND
+    cflush();
+#endif
+
+    free(devices);
+
+    ret = amdsmi_shut_down();
+    if (ret != AMDSMI_STATUS_SUCCESS)
+    {
+        variorum_error_handler("Could not shutdown AMDSMI",
+                               VARIORUM_ERROR_PLATFORM_ENV,
+                               getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                               __LINE__);
+    }
 }
 
 void get_gpu_utilization_data_json(int chipid, int total_sockets,
                                    json_t *output)
 {
-    // Placeholder - implementation would mirror AMD_GPU utilization monitoring
+    amdsmi_status_t ret;
+    uint32_t num_devices = 0;
+    amdsmi_processor_handle *devices = NULL;
+    int gpus_per_socket;
+    char socketID[16];
+    char deviceID[32];
+
+    ret = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
+    if (ret != AMDSMI_STATUS_SUCCESS)
+    {
+        variorum_error_handler("Could not initialize AMDSMI",
+                               VARIORUM_ERROR_PLATFORM_ENV,
+                               getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                               __LINE__);
+        return;
+    }
+
+    devices = amd_apu_get_all_processor_handles(&num_devices);
+    if (devices == NULL || num_devices == 0)
+    {
+        variorum_error_handler("Could not get number of APU devices",
+                               VARIORUM_ERROR_PLATFORM_ENV,
+                               getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                               __LINE__);
+        amdsmi_shut_down();
+        return;
+    }
+
+    gpus_per_socket = num_devices / total_sockets;
+
+    // Add metadata
+    json_object_set_new(output, "num_gpus_per_socket",
+                        json_integer(gpus_per_socket));
+    json_object_set_new(output, "num_apus_per_node",
+                        json_integer(total_sockets));
+
+    snprintf(socketID, 16, "socket_%d", chipid);
+
+    json_t *socket_obj = json_object_get(output, socketID);
+    if (socket_obj == NULL)
+    {
+        socket_obj = json_object();
+        json_object_set_new(output, socketID, socket_obj);
+    }
+
+    // Create utilization object under socket
+    json_t *util_obj = json_object();
+    json_object_set_new(socket_obj, "utilization_apu_percent", util_obj);
+
+    // Query utilization for each device in this socket
+    for (int i = chipid * gpus_per_socket;
+         i < (chipid + 1) * gpus_per_socket; i++)
+    {
+        amdsmi_engine_usage_t engine_usage = {};
+
+        ret = amdsmi_get_gpu_activity(devices[i], &engine_usage);
+
+        // Only add to JSON if we got valid data
+        if (ret == AMDSMI_STATUS_SUCCESS)
+        {
+            // Add individual engine utilization values
+            snprintf(deviceID, 32, "APU_%d_gfx", i);
+            json_object_set_new(util_obj, deviceID,
+                                json_integer(engine_usage.gfx_activity));
+
+            snprintf(deviceID, 32, "APU_%d_umc", i);
+            json_object_set_new(util_obj, deviceID,
+                                json_integer(engine_usage.umc_activity));
+
+            snprintf(deviceID, 32, "APU_%d_mm", i);
+            json_object_set_new(util_obj, deviceID,
+                                json_integer(engine_usage.mm_activity));
+        }
+    }
+
+    free(devices);
+
+    ret = amdsmi_shut_down();
+    if (ret != AMDSMI_STATUS_SUCCESS)
+    {
+        variorum_error_handler("Could not shutdown AMDSMI",
+                               VARIORUM_ERROR_PLATFORM_ENV,
+                               getenv("HOSTNAME"), __FILE__, __FUNCTION__,
+                               __LINE__);
+    }
 }
