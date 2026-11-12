@@ -49,7 +49,6 @@ have implementations in Variorum are provided in the following sections:
 
 -  :doc:`api/print_functions`
 -  :doc:`api/cap_functions`
--  :doc:`api/json_support_functions`
 -  :doc:`api/enable_disable_functions`
 -  :doc:`api/advanced_topology_functions`
 -  :doc:`api/json`

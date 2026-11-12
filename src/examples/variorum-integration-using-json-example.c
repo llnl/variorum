@@ -110,19 +110,37 @@ void parse_json_power_obj(char *s, int num_sockets)
         if (num_gpus_per_socket > 0)
         {
             json_t *gpu_obj = json_object_get(socket_obj, "power_gpu_watts");
+            json_t *apu_obj = json_object_get(socket_obj, "power_apu_watts");
+            // If not APU but there are GPUs
+	    if (gpu_obj != NULL)
+	    {
+                const char *key;
+                json_t *value;
 
-            if (gpu_obj == NULL)
-            {
-                printf("GPU object not found! \n");
+                json_object_foreach(gpu_obj, key, value)
+                {
+                    printf("Socket %d, %s Power: %0.2lf Watts\n", i, key, json_real_value(value));
+                }
+
+	    }
+	    // If APU
+	    else if (apu_obj != NULL)
+	    {
+                const char *key;
+                json_t *value;
+
+                json_object_foreach(apu_obj, key, value)
+                {
+                    printf("APU %d, %s Power: %0.2lf Watts\n", i, key, json_real_value(value));
+                }
+
+	    }
+	    else
+	    {
+                printf("Neither GPU nor APU object not found! \n");
                 exit(0);
-            }
-            const char *key;
-            json_t *value;
+	    }
 
-            json_object_foreach(gpu_obj, key, value)
-            {
-                printf("Socket %d, %s Power: %0.2lf Watts\n", i, key, json_real_value(value));
-            }
         }
 
     }

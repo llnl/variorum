@@ -736,4 +736,22 @@ char *variorum_get_current_version(void);
 /// @brief Test for memory leaks.
 int variorum_tester(void);
 
+/*********************************/
+/* Exploratory AMD ESMI API      */
+/*********************************/
+/// @brief Explore AMD metrics using the ESMI metrics table API.
+///
+/// This is an exploratory API for playing with AMD MI300A metrics
+/// using the esmi_metrics_table_get() interface. It returns a JSON
+/// string with all available metrics from the ESMI metrics table.
+///
+/// @supparch
+/// - AMD MI300A APU
+///
+/// @param [out] metrics_json_str String (passed by reference) that contains
+/// all metrics from the ESMI metrics table in JSON format.
+///
+/// @return 0 if successful, otherwise -1.
+int variorum_get_amd_esmi_metrics_json(char **metrics_json_str);
+
 #endif

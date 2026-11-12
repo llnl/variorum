@@ -82,6 +82,11 @@ if(VARIORUM_WITH_AMD_GPU)
 else()
     message(STATUS "Building without support for AMD GPU architectures (VARIORUM_WITH_AMD_GPU == OFF)")
 endif()
+if(VARIORUM_WITH_AMD_APU)
+    message(STATUS "Building support for AMD APU architectures (VARIORUM_WITH_AMD_APU == ON)")
+else()
+    message(STATUS "Building without support for AMD APU architectures (VARIORUM_WITH_AMD_APU == OFF)")
+endif()
 
 #############
 # DEBUGGING #

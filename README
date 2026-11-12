@@ -69,7 +69,7 @@ installs. These can be used as follows:
 Variorum has support for an increasing number of platforms and
 microarchitectures:
 
-Platforms supported: AMD, ARM, IBM, Intel, NVIDIA
+Platforms supported: AMD, AMD APU, ARM, IBM, Intel, NVIDIA
 
 If you are unsure of your architecture number, check the "model" field in `lscpu`
 or `/proc/cpuinfo` (note that it will not be in hexadecimal).
@@ -82,6 +82,11 @@ Supported AMD Microrchitectures:
 Supported AMD GPUs:
 
     AMD Radeon Instinct, all models from MI50 onwards.
+
+Supported AMD APUs:
+
+    AMD Instinct MI300A (energy, power, and thermal monitoring; clock,
+    power-capping, and utilization support planned)
 
 Supported ARM Microrchitectures:
 
@@ -136,6 +141,9 @@ AMD HSMP driver, and AMD E-SMI library being available with the correct
 permissions.
 
 AMD GPU: Running this software on AMD GPU platforms depends on the ROCm-SMI library.
+
+AMD APU: Running this software on AMD APU platforms (e.g. MI300A) depends on
+the AMD SMI library (``amd_smi``), part of a ROCm install.
 
 ARM: Running this software on ARM platforms depends on the Linux Hardware
 Monitoring (hwmon) subsystem for access to the monitoring and control

@@ -93,7 +93,6 @@ the nation's exascale computing imperative.
 
    api/print_functions
    api/cap_functions
-   api/json_support_functions
    api/enable_disable_functions
    api/advanced_topology_functions
    api/json
