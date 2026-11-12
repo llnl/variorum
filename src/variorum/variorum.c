@@ -1821,6 +1821,7 @@ int variorum_get_amd_esmi_metrics_json(char **metrics_json_str)
     }
     return 0;
 #else
+    (void)metrics_json_str;
     variorum_error_handler("Feature only available for AMD MI300A APU",
                            VARIORUM_ERROR_FEATURE_NOT_IMPLEMENTED,
                            getenv("HOSTNAME"), __FILE__,
